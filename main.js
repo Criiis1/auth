@@ -1,71 +1,86 @@
+// Configuración de Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyCDm5X0hjr3jJ4oSylQzbOMFDzCPCfskmU",
-  authDomain: "authproject-9e9f7.firebaseapp.com",
-  projectId: "authproject-9e9f7",
-  storageBucket: "authproject-9e9f7.firebasestorage.app",
-  messagingSenderId: "128126979764",
-  appId: "1:128126979764:web:56dc0d7c12a87221ebd1e1",
-  measurementId: "G-JCJZ4S6GCY"};
+    apiKey: "AIzaSyCDm5X0hjr3jJ4oSylQzbOMFDzCPCfskmU",
+    authDomain: "authproject-9e9f7.firebaseapp.com",
+    projectId: "authproject-9e9f7",
+    storageBucket: "authproject-9e9f7.firebasestorage.app",
+    messagingSenderId: "128126979764",
+    appId: "1:128126979764:web:56dc0d7c12a87221ebd1e1",
+    measurementId: "G-JCJZ4S6GCY"
+};
 
+// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Función para mostrar errores
+const showError = (message) => {
+    document.getElementById('errorMsg').textContent = message;
+};
+
+// ✅ Registro de usuario
+const registerForm = document.getElementById('registerForm');
+if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+
+        try {
+            // Crear usuario en Firebase Auth
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            // Guardar información en Firestore
+            await db.collection('users').doc(user.uid).set({
+                name: name,
+                email: email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+
+            alert('Usuario registrado con éxito');
+            window.location.href = 'dashboard.html';
+        } catch (error) {
+            showError(error.message);
+        }
+    });
+}
+
+// ✅ Inicio de sesión
 const loginForm = document.getElementById('loginForm');
-const errorMsg = document.getElementById('error');
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
 
-    try {
-        const userDoc = db.collection('users').doc(email);
-        const userSnapshot = await userDoc.get();
-        const userData = userSnapshot.data();
-
-        // Verificar si está bloqueado
-        if (userData?.lockedUntil && new Date() < userData.lockedUntil.toDate()) {
-            throw new Error('Cuenta bloqueada. Intenta más tarde');
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+            window.location.href = 'dashboard.html';
+        } catch (error) {
+            showError(error.message);
         }
+    });
+}
 
-        // Iniciar sesión
-        await auth.signInWithEmailAndPassword(email, password);
+// ✅ Cerrar sesión
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        await auth.signOut();
+        window.location.href = 'index.html';
+    });
+}
 
-        // Restablecer intentos fallidos
-        await userDoc.set({ failedAttempts: 0 }, { merge: true });
-
-        // Registrar intento exitoso en Firestore
-        await userDoc.collection('loginAttempts').add({
-            status: 'success',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
+// ✅ Redirección automática si el usuario está autenticado
+auth.onAuthStateChanged((user) => {
+    if (user && window.location.pathname === '/index.html') {
         window.location.href = 'dashboard.html';
-    } catch (error) {
-        errorMsg.textContent = error.message;
-
-        // Manejar intentos fallidos
-        const userDoc = db.collection('users').doc(email);
-        const userSnapshot = await userDoc.get();
-        let failedAttempts = userSnapshot.exists ? userSnapshot.data().failedAttempts || 0 : 0;
-
-        failedAttempts++;
-
-        // Bloquear si hay 3 intentos fallidos
-        if (failedAttempts >= 3) {
-            await userDoc.set({
-                failedAttempts: 3,
-                lockedUntil: new Date(Date.now() + 1 * 60 * 1000) // Bloquear por 1 minuto
-            }, { merge: true });
-        } else {
-            await userDoc.set({ failedAttempts }, { merge: true });
-        }
-
-        // Registrar intento fallido en Firestore
-        await userDoc.collection('loginAttempts').add({
-            status: 'failed',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+    } else if (!user && window.location.pathname === '/dashboard.html') {
+        window.location.href = 'index.html';
     }
 });
