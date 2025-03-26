@@ -7,6 +7,14 @@
 </head>
 
 <body>
+        <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script src="main.js"></script>
+
+        <!-- Forms -->
     <h2>Registro de Usuario</h2>
     <form id="registerForm">
         <input type="text" id="name" placeholder="Nombre completo" required>
@@ -23,13 +31,6 @@
     </form>
 
     <p id="errorMsg"></p>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
-    <script src="main.js"></script>
 </body>
 
 </html>
