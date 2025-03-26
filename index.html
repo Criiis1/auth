@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Inicio de Sesión - Firebase</title>
+</head>
+<body>
+    <h2>Inicio de Sesión</h2>
+    <form id="loginForm">
+        <label>Email: <input type="email" id="email" required></label><br>
+        <label>Contraseña: <input type="password" id="password" required></label><br>
+        <button type="submit">Iniciar sesión</button>
+    </form>
+    <p id="error" style="color: red;"></p>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
