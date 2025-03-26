@@ -38,7 +38,7 @@ registerForm.addEventListener('submit', async (e) => {
         window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Error en el registro:', error);
-        alert(error.message);
+        alert(`Error al registrar: ${error.message}`);
     }
 });
 
@@ -59,12 +59,21 @@ loginForm.addEventListener('submit', async (e) => {
             return;
         }
 
-        const { failedAttempts } = userDoc.data();
+        const { failedAttempts, lockoutTime } = userDoc.data();
 
-        // Bloquear si se supera el número de intentos
+        // Si hay un tiempo de bloqueo, verificar si el usuario puede intentar de nuevo
         if (failedAttempts >= MAX_ATTEMPTS) {
-            alert('Cuenta bloqueada por demasiados intentos fallidos. Inténtalo más tarde.');
-            return;
+            const currentTime = new Date().getTime();
+            if (lockoutTime && currentTime - lockoutTime < 5000) { // 1 min de bloqueo
+                alert('Cuenta bloqueada por demasiados intentos fallidos. Inténtalo más tarde.');
+                return;
+            } else {
+                // Restablecer los intentos después de 1 hora
+                await userRef.update({
+                    failedAttempts: 0,
+                    lockoutTime: null
+                });
+            }
         }
 
         // Intentar iniciar sesión
@@ -77,16 +86,17 @@ loginForm.addEventListener('submit', async (e) => {
 
     } catch (error) {
         console.error('Error al iniciar sesión:', error);
-        alert('Credenciales incorrectas');
+        alert(`Credenciales incorrectas: ${error.message}`);
 
         // Aumentar los intentos fallidos solo si el usuario existe
         const userRef = db.collection('users').doc(email);
         const userDoc = await userRef.get();
 
         if (userDoc.exists) {
-            const { failedAttempts } = userDoc.data() || { failedAttempts: 0 };
+            const { failedAttempts = 0 } = userDoc.data();
             await userRef.update({
-                failedAttempts: failedAttempts + 1
+                failedAttempts: failedAttempts + 1,
+                lockoutTime: (failedAttempts + 1 >= MAX_ATTEMPTS) ? new Date().getTime() : null
             });
 
             if (failedAttempts + 1 >= MAX_ATTEMPTS) {
