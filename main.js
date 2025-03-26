@@ -1,5 +1,5 @@
 const firebaseConfig = {
-    apiKey: "AIzaSyCDm5X0hjr3jJ4oSylQzbOMFDzCPCfskmU",
+    apiKey: "AIzaSyCDM5X0hjr3jJ4oSylQzbOMFDzCPCfskmU",
     authDomain: "authproject-9e9f7.firebaseapp.com",
     projectId: "authproject-9e9f7",
     storageBucket: "authproject-9e9f7.firebasestorage.app",
@@ -12,6 +12,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+const MAX_ATTEMPTS = 5; // Límite de intentos permitidos
 
 // Registro de usuario
 const registerForm = document.getElementById('registerForm');
@@ -40,47 +42,56 @@ registerForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Inicio de sesión con conteo de intentos fallidos
+// Inicio de sesión con control de intentos fallidos
 const loginForm = document.getElementById('loginForm');
-const MAX_ATTEMPTS = 5; // Máximo de intentos permitidos
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
 
     try {
-        // Verificar los intentos fallidos
-        const userDoc = await db.collection('users').doc(email).get();
-        if (userDoc.exists) {
-            const { failedAttempts } = userDoc.data();
-            
-            if (failedAttempts >= MAX_ATTEMPTS) {
-                alert('Cuenta bloqueada. Inténtalo más tarde.');
-                return;
-            }
+        // Verificar si el usuario existe en Firestore
+        const userRef = db.collection('users').doc(email);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            alert('Usuario no registrado');
+            return;
+        }
+
+        const { failedAttempts } = userDoc.data();
+
+        // Bloquear si se supera el número de intentos
+        if (failedAttempts >= MAX_ATTEMPTS) {
+            alert('Cuenta bloqueada por demasiados intentos fallidos. Inténtalo más tarde.');
+            return;
         }
 
         // Intentar iniciar sesión
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         alert('Inicio de sesión exitoso');
 
-        // Reiniciar intentos fallidos
-        await db.collection('users').doc(email).update({
-            failedAttempts: 0
-        });
-
+        // Reiniciar intentos fallidos si el inicio es exitoso
+        await userRef.update({ failedAttempts: 0 });
         window.location.href = 'dashboard.html';
+
     } catch (error) {
         console.error('Error al iniciar sesión:', error);
         alert('Credenciales incorrectas');
 
-        // Registrar intento fallido
-        const userDoc = await db.collection('users').doc(email).get();
+        // Aumentar los intentos fallidos solo si el usuario existe
+        const userRef = db.collection('users').doc(email);
+        const userDoc = await userRef.get();
+
         if (userDoc.exists) {
-            const { failedAttempts } = userDoc.data();
-            await db.collection('users').doc(email).update({
+            const { failedAttempts } = userDoc.data() || { failedAttempts: 0 };
+            await userRef.update({
                 failedAttempts: failedAttempts + 1
             });
+
+            if (failedAttempts + 1 >= MAX_ATTEMPTS) {
+                alert('Cuenta bloqueada. Inténtalo más tarde.');
+            }
         }
     }
 });
