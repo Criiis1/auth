@@ -10,65 +10,38 @@
     <h3 id="userName">Cargando...</h3>
     <button id="logout">Cerrar sesión</button>
 
-    <!-- Importar Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="main.js"></script>
     <script>
-        // ✅ Configuración de Firebase (usa tus credenciales reales)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCDm5X0hjr3jJ4oSylQzbOMFDzCPCfskmU",
-            authDomain: "authproject-9e9f7.firebaseapp.com",
-            projectId: "authproject-9e9f7",
-            storageBucket: "authproject-9e9f7.firebasestorage.app",
-            messagingSenderId: "128126979764",
-            appId: "1:128126979764:web:56dc0d7c12a87221ebd1e1",
-            measurementId: "G-JCJZ4S6GCY"
-        };
-
-        // ✅ Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-
-        // ✅ Mostrar el nombre del usuario
+        // 👤 Mostrar nombre del usuario
         const userNameElement = document.getElementById('userName');
 
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // Si el usuario está autenticado, mostrar su nombre o email
                 userNameElement.textContent = `Hola, ${user.displayName || user.email}`;
             } else {
-                // Redirigir al login si no está autenticado
                 window.location.href = 'index.html';
             }
         });
 
-        // ✅ Lógica para cerrar sesión
-        const logoutBtn = document.getElementById('logout');
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                await auth.signOut();
-                window.location.href = 'index.html';
-            } catch (error) {
-                console.error('Error al cerrar sesión:', error);
-            }
+        // 🔐 Cerrar sesión
+        document.getElementById('logout').addEventListener('click', async () => {
+            await auth.signOut();
+            window.location.href = 'index.html';
         });
 
-        // ✅ Cerrar sesión después de 30 segundos de inactividad
+        // 🕒 Cerrar sesión por inactividad (30s)
         let timeout;
         const resetTimer = () => {
             clearTimeout(timeout);
             timeout = setTimeout(async () => {
-                try {
-                    await auth.signOut();
-                    window.location.href = 'index.html';
-                } catch (error) {
-                    console.error('Error al cerrar por inactividad:', error);
-                }
-            }, 30000); // 30 segundos
+                await auth.signOut();
+                window.location.href = 'index.html';
+            }, 30000);
         };
 
-        // Reiniciar el contador en caso de actividad
         window.onload = resetTimer;
         document.onmousemove = resetTimer;
         document.onkeydown = resetTimer;
