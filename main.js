@@ -71,7 +71,7 @@ loginForm.addEventListener('submit', async (e) => {
                 // Restablecer los intentos después de 1 hora
                 await userRef.update({
                     failedAttempts: 0,
-                    lockoutTime: null
+                    lockoutTime: 10
                 });
             }
         }
