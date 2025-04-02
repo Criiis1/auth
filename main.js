@@ -125,50 +125,31 @@ if (document.getElementById('registerForm')) {
     const password = document.getElementById('loginPassword').value;
 
     try {
+      // Primero, intentar autenticar con Firebase Authentication
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+      
       // Verificar si el usuario existe en Firestore
       const userRef = db.collection('users').doc(email);
       const userDoc = await userRef.get();
 
       if (!userDoc.exists) {
-        loginErrorMsg.textContent = 'No existe una cuenta con este correo electrónico';
-        return;
+        // Si el usuario se autenticó pero no existe en Firestore, crear el documento
+        await userRef.set({
+          name: user.displayName || '',
+          email: email,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          failedAttempts: 0,
+          lockoutTime: null
+        });
+        console.log('Se creó el documento del usuario en Firestore');
+      } else {
+        // Reiniciar intentos fallidos si el inicio es exitoso
+        await userRef.update({ 
+          failedAttempts: 0,
+          lockoutTime: null
+        });
       }
-
-      const userData = userDoc.data();
-      const failedAttempts = userData.failedAttempts || 0;
-      const lockoutTime = userData.lockoutTime;
-
-      // Verificar si la cuenta está bloqueada
-      if (failedAttempts >= MAX_ATTEMPTS && lockoutTime) {
-        const currentTime = new Date().getTime();
-        const elapsedTime = currentTime - lockoutTime;
-        
-        if (elapsedTime < LOCKOUT_TIME) {
-          // Cuenta bloqueada, mostrar tiempo restante
-          const remainingSeconds = Math.ceil((LOCKOUT_TIME - elapsedTime) / 1000);
-          loginErrorMsg.textContent = `Tu cuenta está temporalmente bloqueada por seguridad`;
-          countdownDiv.style.display = 'block';
-          
-          // Iniciar cuenta regresiva
-          startCountdown(remainingSeconds, email);
-          return;
-        } else {
-          // Restablecer los intentos después del tiempo de bloqueo
-          await userRef.update({
-            failedAttempts: 0,
-            lockoutTime: null
-          });
-        }
-      }
-
-      // Intentar iniciar sesión
-      await auth.signInWithEmailAndPassword(email, password);
-      
-      // Reiniciar intentos fallidos si el inicio es exitoso
-      await userRef.update({ 
-        failedAttempts: 0,
-        lockoutTime: null
-      });
       
       // Redirigir al dashboard
       window.location.href = 'index.html';
@@ -206,6 +187,10 @@ if (document.getElementById('registerForm')) {
             }
             
             await userRef.update(updateData);
+          } else {
+            // Si el usuario no existe en Firestore pero el error es de contraseña incorrecta
+            // significa que el correo existe en Auth pero no en Firestore
+            loginErrorMsg.textContent = 'Correo electrónico o contraseña incorrectos';
           }
         } catch (dbError) {
           console.error('Error al actualizar intentos fallidos:', dbError);
