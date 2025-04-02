@@ -86,16 +86,25 @@ if (document.getElementById('registerForm')) {
     } catch (error) {
       console.error('Error en el registro:', error);
       
-      // Mostrar mensaje de error específico
+      // Mostrar mensaje de error amigable según el código
       switch(error.code) {
         case 'auth/email-already-in-use':
-          regErrorMsg.textContent = 'Este correo ya está registrado';
+          regErrorMsg.textContent = 'Este correo electrónico ya está registrado';
           break;
         case 'auth/invalid-email':
-          regErrorMsg.textContent = 'Correo electrónico inválido';
+          regErrorMsg.textContent = 'El formato del correo electrónico no es válido';
+          break;
+        case 'auth/weak-password':
+          regErrorMsg.textContent = 'La contraseña es demasiado débil, usa al menos 6 caracteres';
+          break;
+        case 'auth/network-request-failed':
+          regErrorMsg.textContent = 'Problema de conexión. Verifica tu internet e intenta de nuevo';
+          break;
+        case 'auth/too-many-requests':
+          regErrorMsg.textContent = 'Demasiados intentos. Por favor, intenta más tarde';
           break;
         default:
-          regErrorMsg.textContent = error.message;
+          regErrorMsg.textContent = 'Error al crear la cuenta. Por favor intenta nuevamente';
       }
     }
   });
@@ -121,7 +130,7 @@ if (document.getElementById('registerForm')) {
       const userDoc = await userRef.get();
 
       if (!userDoc.exists) {
-        loginErrorMsg.textContent = 'Usuario no registrado';
+        loginErrorMsg.textContent = 'No existe una cuenta con este correo electrónico';
         return;
       }
 
@@ -137,7 +146,7 @@ if (document.getElementById('registerForm')) {
         if (elapsedTime < LOCKOUT_TIME) {
           // Cuenta bloqueada, mostrar tiempo restante
           const remainingSeconds = Math.ceil((LOCKOUT_TIME - elapsedTime) / 1000);
-          loginErrorMsg.textContent = `Cuenta bloqueada. Intenta nuevamente en ${remainingSeconds} segundos`;
+          loginErrorMsg.textContent = `Tu cuenta está temporalmente bloqueada por seguridad`;
           countdownDiv.style.display = 'block';
           
           // Iniciar cuenta regresiva
@@ -167,9 +176,9 @@ if (document.getElementById('registerForm')) {
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
       
-      // Aumentar los intentos fallidos solo para errores de autenticación
+      // Mostrar mensaje de error amigable según el código
       if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        loginErrorMsg.textContent = 'Credenciales incorrectas';
+        loginErrorMsg.textContent = 'Correo electrónico o contraseña incorrectos';
         
         try {
           const userRef = db.collection('users').doc(email);
@@ -185,23 +194,41 @@ if (document.getElementById('registerForm')) {
             // Si alcanzó el límite, establecer tiempo de bloqueo
             if (failedAttempts >= MAX_ATTEMPTS) {
               updateData.lockoutTime = new Date().getTime();
-              loginErrorMsg.textContent = `Cuenta bloqueada por ${LOCKOUT_TIME/1000} segundos`;
+              loginErrorMsg.textContent = `Por seguridad, tu cuenta ha sido bloqueada temporalmente`;
               countdownDiv.style.display = 'block';
               
               // Iniciar cuenta regresiva
               startCountdown(LOCKOUT_TIME/1000, email);
             } else {
               const remaining = MAX_ATTEMPTS - failedAttempts;
-              loginErrorMsg.textContent = `Credenciales incorrectas. Te quedan ${remaining} intentos`;
+              const intentosText = remaining === 1 ? 'intento' : 'intentos';
+              loginErrorMsg.textContent = `Contraseña incorrecta. Te quedan ${remaining} ${intentosText}`;
             }
             
             await userRef.update(updateData);
           }
         } catch (dbError) {
           console.error('Error al actualizar intentos fallidos:', dbError);
+          loginErrorMsg.textContent = 'Error al verificar credenciales. Intenta nuevamente';
         }
       } else {
-        loginErrorMsg.textContent = error.message;
+        // Mostrar mensajes amigables para otros errores comunes
+        switch(error.code) {
+          case 'auth/invalid-email':
+            loginErrorMsg.textContent = 'El formato del correo electrónico no es válido';
+            break;
+          case 'auth/user-disabled':
+            loginErrorMsg.textContent = 'Esta cuenta ha sido desactivada';
+            break;
+          case 'auth/network-request-failed':
+            loginErrorMsg.textContent = 'Problema de conexión. Verifica tu internet';
+            break;
+          case 'auth/too-many-requests':
+            loginErrorMsg.textContent = 'Demasiados intentos. Por favor, intenta más tarde';
+            break;
+          default:
+            loginErrorMsg.textContent = 'Error al iniciar sesión. Por favor intenta nuevamente';
+        }
       }
     }
   });
@@ -218,7 +245,7 @@ if (document.getElementById('registerForm')) {
       if (remainingTime <= 0) {
         clearInterval(countdownInterval);
         countdownDiv.style.display = 'none';
-        loginErrorMsg.textContent = 'Ya puedes intentar nuevamente';
+        loginErrorMsg.textContent = 'Ya puedes intentar iniciar sesión nuevamente';
         
         // Desbloquear cuenta en la base de datos
         const userRef = db.collection('users').doc(email);
