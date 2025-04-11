@@ -145,6 +145,16 @@
 
         <div id="productsList"></div> <!-- Aquí listamos los productos -->
 
+        <form id="pdfForm">
+        <input type="text" id="pdfName" placeholder="Nombre del PDF" required />
+        <input type="text" id="pdfDescription" placeholder="Descripción" required />
+        <input type="file" id="pdfFile" accept="application/pdf" required />
+        <button type="submit">Guardar PDF</button>
+        </form>
+
+        <div id="pdfList"></div> <!-- Aquí mostraremos los PDFs -->
+
+
 
         <section id="about" class="content-section hidden">
             <h2>Sobre Nosotros</h2>
