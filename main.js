@@ -249,3 +249,81 @@ if (document.getElementById('goToLogin')) {
     window.location.href = 'login.html';
   });
 }
+
+
+
+// Referencias a Firestore y Storage
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+// Formulario de productos
+const productForm = document.getElementById('productForm');
+
+productForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const name = document.getElementById('productName').value;
+  const description = document.getElementById('productDescription').value;
+  const price = parseFloat(document.getElementById('productPrice').value);
+  const imageFile = document.getElementById('productImage').files[0];
+
+  if (!imageFile) {
+    alert('Selecciona una imagen');
+    return;
+  }
+
+  try {
+    // Subir imagen a Storage
+    const storageRef = storage.ref(`productos/${imageFile.name}`);
+    await storageRef.put(imageFile);
+    const imageUrl = await storageRef.getDownloadURL();
+
+    // Guardar datos en Firestore
+    await db.collection('productos').add({
+      nombre: name,
+      descripcion: description,
+      precio: price,
+      imagenURL: imageUrl,
+      fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert('Producto guardado exitosamente 🎉');
+    productForm.reset();
+    loadProducts(); // Recargar lista de productos
+  } catch (error) {
+    console.error('Error al guardar producto:', error);
+    alert('Error al guardar producto');
+  }
+});
+
+// Función para cargar productos
+async function loadProducts() {
+  const productsList = document.getElementById('productsList');
+  productsList.innerHTML = '';
+
+  const snapshot = await db.collection('productos').orderBy('fechaCreacion', 'desc').get();
+  snapshot.forEach(doc => {
+    const product = doc.data();
+    productsList.innerHTML += `
+      <div style="border:1px solid #ccc; margin:10px; padding:10px;">
+        <img src="${product.imagenURL}" alt="${product.nombre}" width="100">
+        <h3>${product.nombre}</h3>
+        <p>${product.descripcion}</p>
+        <p><strong>Precio:</strong> $${product.precio}</p>
+        <button onclick="deleteProduct('${doc.id}')">Eliminar</button>
+      </div>
+    `;
+  });
+}
+
+// Función para eliminar producto
+async function deleteProduct(id) {
+  if (confirm('¿Seguro que quieres eliminar este producto?')) {
+    await db.collection('productos').doc(id).delete();
+    alert('Producto eliminado');
+    loadProducts();
+  }
+}
+
+// Cargar productos automáticamente al abrir
+window.onload = loadProducts;
