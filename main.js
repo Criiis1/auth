@@ -327,3 +327,70 @@ async function deleteProduct(id) {
 
 // Cargar productos automáticamente al abrir
 window.onload = loadProducts;
+
+// Asegúrate que Firebase esté inicializado (firebase.js cargado)
+
+// Referencias
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+// Formulario
+const pdfForm = document.getElementById('pdfForm');
+
+pdfForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const name = document.getElementById('pdfName').value;
+  const description = document.getElementById('pdfDescription').value;
+  const pdfFile = document.getElementById('pdfFile').files[0];
+
+  if (!pdfFile) {
+    alert('Por favor selecciona un PDF.');
+    return;
+  }
+
+  try {
+    // Subir PDF a Storage
+    const storageRef = storage.ref(`pdfs/${pdfFile.name}`);
+    await storageRef.put(pdfFile);
+    const pdfURL = await storageRef.getDownloadURL();
+
+    // Guardar información en Firestore
+    await db.collection('pdfs').add({
+      nombre: name,
+      descripcion: description,
+      pdfURL: pdfURL,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert('PDF guardado exitosamente.');
+    pdfForm.reset();
+    cargarPDFs(); // Para refrescar la lista automáticamente
+  } catch (error) {
+    console.error('Error subiendo PDF:', error);
+    alert('Error al subir el PDF.');
+  }
+});
+
+
+async function cargarPDFs() {
+  const pdfList = document.getElementById('pdfList');
+  pdfList.innerHTML = '';
+
+  const snapshot = await db.collection('pdfs').orderBy('timestamp', 'desc').get();
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    pdfList.innerHTML += `
+      <div>
+        <h3>${data.nombre}</h3>
+        <p>${data.descripcion}</p>
+        <a href="${data.pdfURL}" target="_blank">Ver PDF</a>
+      </div>
+      <hr>
+    `;
+  });
+}
+
+// Cargar PDFs al iniciar la página
+window.addEventListener('DOMContentLoaded', cargarPDFs);
+
