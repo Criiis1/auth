@@ -135,6 +135,17 @@
             </ul>
         </section>
 
+        <form id="productForm">
+        <input type="text" id="productName" placeholder="Nombre del producto" required />
+        <input type="text" id="productDescription" placeholder="Descripción" required />
+        <input type="number" id="productPrice" placeholder="Precio" required />
+        <input type="file" id="productImage" accept="image/*" required />
+        <button type="submit">Guardar Producto</button>
+        </form>
+
+        <div id="productsList"></div> <!-- Aquí listamos los productos -->
+
+
         <section id="about" class="content-section hidden">
             <h2>Sobre Nosotros</h2>
             <p>Somos una empresa dedicada al desarrollo de soluciones de seguridad web. Nuestra misión es proteger la información de nuestros clientes mediante implementación de técnicas avanzadas de ciberseguridad.</p>
